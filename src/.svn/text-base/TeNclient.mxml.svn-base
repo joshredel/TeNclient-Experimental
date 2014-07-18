@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   xmlns:local="*"
+					   width="1360" height="768" showStatusBar="false"
+					   applicationComplete="center()" backgroundColor="0x000000"
+					   frameRate="60">
+	
+	<fx:Script>
+		<![CDATA[
+			import com.adobe.serialization.json.JSON;
+			private function center():void {
+				//nativeWindow.x = (Screen.mainScreen.bounds.width - nativeWindow.width) / 2;
+				//nativeWindow.y = 0;
+				
+				// enlarge if we have the space!
+//				if(Screen.mainScreen.bounds.width > 1400) {
+//					nativeWindow.width = 1920;
+//					nativeWindow.height = 1080;
+//					
+//					// scale the main window
+//					mainView.scaleX = 1.41176;
+//					mainView.scaleY = 1.40625; 
+//				}
+				
+				// hide the mouse
+				Mouse.hide();
+			}
+		]]>
+	</fx:Script>
+	
+	<fx:Style source="assets/styles/ten.css" />
+	
+	<local:View720 id="mainView" />
+</s:WindowedApplication>

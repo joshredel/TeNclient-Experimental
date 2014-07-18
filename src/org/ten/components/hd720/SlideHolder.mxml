@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:NavigatorContent xmlns:fx="http://ns.adobe.com/mxml/2009"
+					xmlns:s="library://ns.adobe.com/flex/spark"
+					xmlns:mx="library://ns.adobe.com/flex/mx"
+					remove="cleanUp()" width="100%" height="100%"
+					show="playOnShow()" hide="stopOnHide()">
+	<!-- showEffect="{fader}" hideEffect="{fader}" -->
+	
+	<fx:Script>
+		<![CDATA[
+			import org.ten.events.SlideEvent;
+			
+			/**
+			 * The slide which is being displayed in this container.
+			 */
+			private var _slide:String;
+			
+			[Bindable]
+			/**
+			 * Sets the slide which is being displayed in this container.
+			 */
+			//public var slide:Slide;
+			public function set slide(newSlide:String):void {
+				// store the new slide
+				_slide = newSlide;
+				
+				// determine the slide type
+				if(slide.indexOf(".f") > -1) {
+					// it is an flv, so load it in the video container
+					// maker sure we can see it
+					slideContent.visible = false;
+					slideContent.includeInLayout = false;
+					slideFlvContent.visible  = true;
+					slideFlvContent.includeInLayout = true;
+					
+					// load it
+					slideFlvContent.source = "/assets/images/tempslides/" + slide;
+					slideFlvContent.loop = true;
+					slideFlvContent.play();
+					
+					// it will play right away, so dispatch the load event
+					handleLoadComplete();
+				} else {
+					// it is an image or a SWF, load it in the SWF loader
+					slideContent.load("/assets/images/tempslides/" + slide);
+				}
+			}
+			
+			/**
+			 * Gets the slide which is being displayed in this container.
+			 */
+			public function get slide():String {
+				return _slide;
+			}
+			
+			[Bindable]
+			/**
+			 * Whether the slide's content has been loaded.
+			 */
+			public var hasLoaded:Boolean = false;
+			
+			/**
+			 * Handles the load completion of the slide content.
+			 * Dispatches a slide loaded event to the parent.
+			 */
+			private function handleLoadComplete(event:Event = null):void {
+				// mark that we've loaded and notify the parent
+				hasLoaded = true;
+				this.parent.dispatchEvent(new SlideEvent(SlideEvent.SLIDE_LOADED));
+			}
+			
+			/**
+			 * When the slide becomes visible, check if this holder is 
+			 * a video.  If so, play the video.
+			 */
+			private function playOnShow():void {
+				if(slide.indexOf(".f") > -1) {
+					slideFlvContent.play();
+				}
+			}
+			
+			/**
+			 * When the slide becomes invisible, check if this holder is 
+			 * a video.  If so, stop the video.
+			 */
+			private function stopOnHide():void {
+				if(slide.indexOf(".f") > -1) {
+					slideFlvContent.stop();
+				}
+			}
+			
+			/**
+			 * When the slide is removed from the player,
+			 * we should clean everything up!  This will help prevent
+			 * memory leaks.
+			 */
+			private function cleanUp():void {
+				// unload the image and call the garbage collector
+				slideContent.unloadAndStop(true);
+				slideFlvContent.stop(); // will this work well?
+			}
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!--<viewStackEffects:Fade id="fader" duration="700" />-->
+	</fx:Declarations>
+	
+	<s:layout>
+		<s:HorizontalLayout horizontalAlign="center" />
+	</s:layout>
+	
+	<s:SWFLoader id="slideContent" complete="handleLoadComplete()"
+				 width="{this.width}" height="{this.height}" smoothBitmapContent="true" />
+	
+	<s:VideoDisplay id="slideFlvContent" width="{this.width}" height="{this.height}" 
+					includeInLayout="false" visible="false" />
+	<!-- source="{'http://ten.mcgilleus.ca/tenapp/slides/' + slide.slideLocation}" -->
+</s:NavigatorContent>

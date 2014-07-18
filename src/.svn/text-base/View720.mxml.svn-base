@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:hd720="org.ten.components.hd720.*"
+		 width="1360" height="768" creationComplete="finish()">
+	
+	<fx:Script>
+		<![CDATA[
+			
+			/**
+			 * Prepares the entire view for display.
+			 */
+			private function finish():void {
+				
+			}
+			
+			
+		]]>
+	</fx:Script>
+	
+	<!-- Slide Zone -->
+	<!--<mx:ViewStack id="slideStack" width="912" height="570" x="0" y="0">
+		<mx:Box>
+			<mx:Image width="912" height="570" source="assets/slide.jpg" />
+		</mx:Box>
+	</mx:ViewStack>-->
+	
+	<hd720:SlideContainer id="slideContainer" width="912" height="570" x="0" y="0" />
+	
+	<!-- QRlink Zone -->
+	<hd720:QRLink id="qrLinkZone" x="0" y="570" />
+	
+	<!-- Ticker Tape Zone -->
+	<hd720:TickerTape id="tickerZone" x="0" y="728" />
+	
+	<!-- Weather and Pulse Zone -->
+	<hd720:Weather id="weatherZone" x="912" y="0" />
+	
+	<!-- TeNtv Zone -->
+	<s:Group id="tenTvZone" width="448" height="297" x="912" y="431">
+		<s:Image width="448" height="252" source="assets/images/tv.png" smooth="true" />
+		<s:Image width="448" height="45" y="252" source="assets/images/tentv.png" smooth="true" />
+	</s:Group>
+</s:Group>

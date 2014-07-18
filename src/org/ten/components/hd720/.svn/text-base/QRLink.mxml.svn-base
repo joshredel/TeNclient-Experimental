@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:HGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 width="912" height="158" paddingLeft="17" 
+		 paddingTop="17" paddingBottom="17" gap="17">
+	
+	<s:Image source="/assets/images/qrcode.png" width="124" height="124" />
+	
+	<s:VGroup width="100%" height="100%" gap="8" paddingTop="6" paddingBottom="6">
+		<s:Label text="FOR MORE INFORMATION" styleName="qrDescription" />
+		<s:Label text="Take a snapshot with your phone" styleName="qrInfo" />
+		
+		<s:Spacer height="100%" />
+		
+		<s:Label text="OR VISIT" styleName="qrDescription" />
+		<s:Label text="http://ten.mcgilleus.ca/" styleName="qrInfo" />
+	</s:VGroup>
+	
+</s:HGroup>

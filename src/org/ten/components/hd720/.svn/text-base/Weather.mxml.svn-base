@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 width="448" height="431" clipAndEnableScrolling="true"
+		 creationComplete="finish()">
+	
+	<fx:Script>
+		<![CDATA[
+			import com.yahoo.webapis.weather.CurrentConditions;
+			import com.yahoo.webapis.weather.ForecastConditions;
+			import com.yahoo.webapis.weather.WeatherService;
+			import com.yahoo.webapis.weather.events.WeatherResultEvent;
+			
+			import mx.formatters.DateFormatter;
+			
+			/**
+			 * @private
+			 * The weather service used to request weather.
+			 */
+			private var weatherService:WeatherService = new WeatherService();
+			
+			[Bindable]
+			/**
+			 * Holds the current condition's code (for image fetching)
+			 */
+			private var conditionCode:Number;
+			
+			[Bindable]
+			/**
+			 * Holds the later condition's code (for image fetching)
+			 */
+			private var latersConditionCode:Number;
+			
+			[Bindable]
+			/**
+			 * Holds tomorrow's condition's code (for image fetching)
+			 */
+			private var tomorrowsConditionCode:Number;
+			
+			/**
+			 * The rate of energy used by the Eiffel Tower (GJ/h).
+			 */
+			private static const EIFFEL_RATE:Number = 3.2;
+			
+			/**
+			 * Prepares a timer to move the background images with the 
+			 * progression of time and to prepare a timer to manage the 
+			 * time in the clock and prepares the weather service.
+			 */
+			private function finish():void {
+				// move the scrolling background to its appropriate position based on current time
+				// get the current hour+minute as a fraction of 24 hours
+				var now:Date = new Date();
+				var fractionOfDay:Number = (now.hours + (now.minutes / 60)) / 24;
+				
+				// get the x position of the entire (both backgrounds) scrolling 
+				// background that the fraction corresponds to
+				var fractionX:Number = fractionOfDay * (scrollingBackground1.width + scrollingBackground2.width);
+				
+				// set the background positions accordingly
+				if(fractionX <  scrollingBackground1.width) {
+					// background 1 is still in front, i.e. it is before noon
+					scrollingBackground1.x = Math.floor(0 - fractionX);
+					scrollingBackground2.x = scrollingBackground1.x + scrollingBackground1.width;
+				} else {
+					// backround 2 is in front, i.e. it is past noon
+					scrollingBackground2.x = Math.floor(0 -fractionX - scrollingBackground2.width);
+					scrollingBackground1.x = scrollingBackground2.x + scrollingBackground2.width;
+				}
+				
+				// prepare and start the mover timer
+				var moverTimer:Timer = new Timer(24351.8);//, 3548 + 448); // 24351.8 is roughly enough second for one day
+				moverTimer.addEventListener(TimerEvent.TIMER, moveBackground);
+				moverTimer.start();
+				moveBackground();
+				
+				// prepare and start the clock timer
+				var clockTimer:Timer = new Timer(1000);
+				clockTimer.addEventListener(TimerEvent.TIMER, refreshTime);
+				clockTimer.start();
+				refreshTime();
+				
+				// initialize the weather service and listen for responses
+				weatherService = new WeatherService();
+				weatherService.addEventListener(WeatherResultEvent.WEATHER_LOADED, handleWeatherResult);
+				refreshWeather();
+				
+				// prepare and start a timer to refresh the weather
+				var weatherTimer:Timer = new Timer(600000);
+				weatherTimer.addEventListener(TimerEvent.TIMER, refreshWeather);
+				weatherTimer.start();
+				
+				// prepare and start a timer to refresh the energy consumption
+				var energyTimer:Timer = new Timer(600000);
+				energyTimer.addEventListener(TimerEvent.TIMER, refreshEnergy);
+				energyTimer.start();
+				refreshEnergy();
+			}
+			
+			/**
+			 * Handles the timer ticking once.
+			 * Moves the background images once.
+			 */
+			private function moveBackground(event:TimerEvent = null):void {
+				// move the background
+				scrollingBackground1.x -= 1;
+				scrollingBackground2.x -= 1;
+				
+				// if a background is entirely to the left of the viewable area, move it to the right
+				if(scrollingBackground1.x < -scrollingBackground1.width - 1) {
+					scrollingBackground1.x = scrollingBackground2.x + scrollingBackground2.width;
+				}
+				if(scrollingBackground2.x < -scrollingBackground2.width - 1) {
+					scrollingBackground2.x = scrollingBackground1.x + scrollingBackground1.width;
+				}
+			}
+			
+			/**
+			 * Refreshed the time and date.
+			 */
+			private function refreshTime(event:TimerEvent = null):void {
+				// a formatter for each of the date and time
+				var formatter:DateFormatter = new DateFormatter();
+				
+				// format the date
+				formatter.formatString = "EEEE, D MMMM";
+				dateLabel.text = formatter.format(new Date());
+				
+				// format the time
+				formatter.formatString = "JJ:NN";
+				timeLabel.text = formatter.format(new Date());
+			}
+			
+			/**
+			 * Gets the weather from Environment Canada's feed.
+			 */
+			private function refreshWeather(event:TimerEvent = null):void {
+				// request the weather
+				weatherService.getWeather("CAXX0301", "c");
+			}
+			
+			/**
+			 * Handles the result of the weather fetch by showing 
+			 * the current weather.
+			 */
+			private function handleWeatherResult(event:WeatherResultEvent):void {
+				// get the current conditions and store the information
+				var conditions:CurrentConditions = weatherService.weather.current;
+				temperatureLabel.text = conditions.temperature + "˚";
+				conditionCode = conditions.code;
+				
+				// get the forecast
+				var forecast:ForecastConditions = weatherService.weather.forecast[0];
+				
+				// display today's high and low
+				todaysHighLabel.text = forecast.high + "˚";
+				todaysLowLabel.text = forecast.low + "˚";
+				
+				// display later today (aka "tonight")
+				latersConditionCode = forecast.code;
+				
+				// move to tomorrow and display the information
+				forecast = weatherService.weather.forecast[1];
+				tomorrowsConditionCode = forecast.code;
+				tomorrowsHighLabel.text = forecast.high + "˚";
+				tomorrowsLowLabel.text = forecast.low + "˚";
+			}
+			
+			/**
+			 * Gets the current energy consumption from Pulse.
+			 */
+			private function refreshEnergy(event:TimerEvent = null):void {
+				// get the current energy consumption
+				energyRateLabel.text = constrainToDigits(4.32, 3);
+				
+				// convert it to Eiffel Towers
+				var eiffelTowers:Number = 4.32 / EIFFEL_RATE;
+				energyEquivalentLabel.text = constrainToDigits(eiffelTowers, 2);
+			}
+			
+			/**
+			 * Helper function.
+			 * Ensures that the display of an element always has the passed 
+			 * number of digits (including 0).
+			 */
+			private function constrainToDigits(value:Number, digits:int):String {
+				// check if the value starts with a zero
+				var stringValue:String = value.toString();
+				if(stringValue.charAt(0) == "0") {
+					// it does, so shorten the precision
+					return value.toPrecision(digits - 1);
+				} else {
+					// it doesn't, so return the defaul precision
+					return value.toPrecision(digits);
+				}
+			}
+		]]>
+	</fx:Script>
+	
+	<!-- Background -->
+	<!--<s:HGroup id="scrollingBackground" gap="0" x="448">-->
+		<mx:Image id="scrollingBackground1" width="1998" height="{this.height}" x="0" source="assets/images/720/scrolling_background2.png" smoothBitmapContent="true" />
+		<mx:Image id="scrollingBackground2" width="1998" height="{this.height}" x="1998" source="assets/images/720/scrolling_background1.png" smoothBitmapContent="true" /> <!-- x was 1998 -->
+	<!--</s:HGroup>-->
+	
+	<!-- Information -->
+	<s:VGroup paddingLeft="33" paddingTop="36" paddingRight="23" gap="10" width="100%">
+		<!-- Date -->
+		<s:Label id="dateLabel" fontFamily="segoeRegular" fontSize="30" />
+		
+		<s:HGroup verticalAlign="middle" width="100%">
+			<!-- Time -->
+			<s:Label id="timeLabel" fontFamily="segoeLight" fontSize="78" />
+			
+			<s:Spacer width="100%" />
+			
+			<!-- Current Weather -->
+			<!--<s:Label text="Currently" fontFamily="segoeSemiBold" fontSize="21" />-->
+			<!--<s:HGroup verticalAlign="middle">-->
+				<s:Image source="assets/images/weather/{conditionCode ? conditionCode : '0'}.png" 
+						 width="70" height="80" smooth="true" verticalAlign="top" />
+				<s:Label id="temperatureLabel" fontFamily="segoeLight" fontSize="78" />
+			<!--</s:HGroup>-->
+		</s:HGroup>
+		
+		<s:Spacer height="10" />
+		
+		<s:HGroup width="100%">
+			<!-- Tonight's Weather -->
+			<s:VGroup width="50%">
+				<s:Label text="Tonight" styleName="weatherTitle" />
+				<s:HGroup verticalAlign="middle">
+					<s:VGroup gap="0">
+						<s:Label id="todaysHighLabel" styleName="weatherLabel" textAlign="right" width="75" />
+						<s:Label id="todaysLowLabel" styleName="weatherLabel" textAlign="right" width="75" />
+					</s:VGroup>
+					<s:Image source="assets/images/weather/{latersConditionCode ? latersConditionCode : '0'}.png" width="70" height="70" smooth="true" />
+				</s:HGroup>
+			</s:VGroup>
+			
+			<!--<s:Spacer width="37" />--> <!-- was 55 -->
+			
+			<!-- Tomorrow's Weather -->
+			<s:VGroup width="50%">
+				<s:Label text="Tomorrow" styleName="weatherTitle" />
+				<s:HGroup verticalAlign="middle">
+					<s:VGroup gap="0">
+						<s:Label id="tomorrowsHighLabel" styleName="weatherLabel" textAlign="right" width="75" /> <!-- width was 66 -->
+						<s:Label id="tomorrowsLowLabel" styleName="weatherLabel" textAlign="right" width="75" />
+					</s:VGroup>
+					<s:Image source="assets/images/weather/{tomorrowsConditionCode ? tomorrowsConditionCode : '0'}.png" width="70" height="70" smooth="true" />
+				</s:HGroup>
+			</s:VGroup>
+		</s:HGroup>
+		
+		<s:Spacer height="10" />
+		
+		<!-- Pulse Energy -->
+		<s:HGroup width="100%">
+			<!-- Current Energy -->
+			<s:VGroup width="50%">
+				<s:Label text="Energy Demand" styleName="weatherTitle" paddingBottom="4" />
+				<s:HGroup verticalAlign="middle">
+					<s:VGroup gap="0">
+						<s:Label id="energyRateLabel" text="6.15" styleName="energyLabel" fontSize="40" textAlign="right" width="90" />
+						<s:Label text="GJ/h" styleName="energyLabel" fontSize="20" textAlign="right" width="90" />
+					</s:VGroup>
+					<s:Image source="assets/images/lightBulb.png" width="55" height="55" smooth="true" smoothingQuality="high" />
+				</s:HGroup>
+			</s:VGroup>
+			
+			<!--<s:Spacer width="37" />-->
+			
+			<!-- Equivalent -->
+			<s:VGroup width="50%">
+				<s:Label text="Equivalent" styleName="weatherTitle" paddingBottom="4" />
+				<s:HGroup verticalAlign="top">
+					<s:Label id="energyEquivalentLabel" text="6.2" textAlign="right" width="110" fontFamily="segoeLight" fontSize="68" />
+					<s:Image source="assets/images/eiffelTower.png" width="30" height="55" smooth="true" />
+				</s:HGroup>
+			</s:VGroup>
+		</s:HGroup>
+	</s:VGroup>
+	
+</s:Group>

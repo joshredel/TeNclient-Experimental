@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:ViewStack xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 creationComplete="finish()" selectedIndex="{_currentSlideIndex}" creationPolicy="all">
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.binding.utils.ChangeWatcher;
+			import mx.rpc.events.ResultEvent;
+			
+			import org.ten.DataShop;
+			import org.ten.events.SlideEvent;
+			
+			[Bindable]
+			/**
+			 * The app's data shop.
+			 */
+			private var dataShop:DataShop = DataShop.instance;
+			
+			[Bindable]
+			/**
+			 * The index of the current slide being viewed.
+			 */
+			public var _currentSlideIndex:Number = 0;
+			
+			[Bindable]
+			/**
+			 * Sets the index of the current slide being viewed.
+			 * Ensures we don't go over the max index.
+			 */
+			public function set currentSlideIndex(newIndex:Number):void {
+				if(newIndex > this.numElements - 1) {
+					_currentSlideIndex = 0;
+				} else {
+					_currentSlideIndex = newIndex;
+				}
+			}
+			
+			/**
+			 * Gets the index of the current slide being viewed.
+			 */
+			public function get currentSlideIndex():Number
+			{
+				return _currentSlideIndex;
+			}
+			
+			/**
+			 * The timer which handles content refreshes.
+			 */
+			private var refreshTimer:Timer;
+			
+			/**
+			 * The timer which handles the slide transitions.
+			 */
+			private var countDownTimer:Timer;
+			
+			/**
+			 * Keeps a track of the number of slides that have loaded their content.
+			 */
+			private var loadedSlidesCount:Number = 0;
+			
+			/**
+			 * Handles the container creation completion.
+			 * Prepares the container to display slides.
+			 */
+			private function finish():void {
+				// listen for slide complete and load events
+				this.addEventListener(SlideEvent.SLIDE_LOADED, handleSlideLoadComplete);
+				
+				// listen for the slides to be fetched
+				//ChangeWatcher.watch(dataShop, "slides", populateSlides);
+				
+				// get all of our data
+				refreshContent();
+				
+				// add timers to refresh the content
+				refreshTimer = new Timer(600000);
+				refreshTimer.addEventListener(TimerEvent.TIMER, refreshContent);
+				//refreshTimer.start();
+			}
+			
+			/**
+			 * Requests the new list of slides from the server.
+			 */
+			private function refreshContent(event:TimerEvent = null):void {
+				// get the slides!
+				//Slide.getMyClientsSlides();
+				populateSlides(null); // temp while we wait to integrate Doctrine
+			}
+			
+			/**
+			 * Handles a return of data from the slide request.
+			 * Populates the slides inside of the container with the server data.
+			 */
+			private function populateSlides(object:ResultEvent):void {
+				if(dataShop.slides.length > 0) {
+					// empty the slides and zero everything out
+					this.removeAllElements();
+					loadedSlidesCount = 0;
+					if(countDownTimer) {
+						countDownTimer.stop();
+						countDownTimer.removeEventListener(TimerEvent.TIMER, nextSlide);
+					}
+					countDownTimer = null;
+					
+					// loop through all of this client's slides
+					for each(var slide:String in dataShop.slides) {
+						// create a new slide container
+						var newHolder:SlideHolder = new SlideHolder();
+						
+						// add it!
+						this.addElement(newHolder);
+						
+						// send the holder its slide
+						newHolder.slide = slide;
+					}
+						
+					// set the slide to something not displayable (so we don't see anything!)
+					currentSlideIndex = -1;
+				}
+			}
+			
+			/**
+			 * Handles a load complete event from a slide holder.
+			 * Counts as slides complete loading and plays the slides 
+			 * once they have all loaded.
+			 */
+			private function handleSlideLoadComplete(event:SlideEvent):void {
+				// increment the number of slides loaded
+				loadedSlidesCount++;
+				
+				// see if we have loaded everything
+				if(loadedSlidesCount == this.numElements) {
+					// all slides have been loaded, so start the show
+					currentSlideIndex = -1; // was 0, and this FOR SURE worked, but it skips the first slide!
+					nextSlide();
+					
+					// start the timer, but only if we have more than one slide
+					if(dataShop.slides.length >= 2) {
+						countDownTimer = new Timer(10000);// new Timer(dataShop.slides.getItemAt(0).durationTime);
+						countDownTimer.addEventListener(TimerEvent.TIMER, nextSlide);
+						countDownTimer.start();
+					}
+				}
+			}
+			
+			/**
+			 * Moves to the next slide once the current slide has completed.
+			 */
+			private function nextSlide(event:Event = null):void {
+				// go to the next slide
+				currentSlideIndex++;
+				
+				// set the new duration
+				if(countDownTimer != null) {
+					//countDownTimer.delay = dataShop.slides.getItemAt(currentSlideIndex).durationTime;
+					countDownTimer.delay = 10000;
+				}
+			}
+		]]>
+	</fx:Script>
+	
+</mx:ViewStack>

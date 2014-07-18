@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 width="1360" height="40" creationComplete="finish()" 
+		 clipAndEnableScrolling="true">
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			
+			import spark.components.Label;
+			
+			/**
+			 * The ticker timer used to handle the advancing of the ticker tape.
+			 */
+			private var tickerTimer:Timer;
+			
+			/**
+			 * DEVEL
+			 * The ticker tape strings.
+			 */
+			private var tickers:Array = ["You're watching TeN - The Engineering Network", 
+										 "Stay tuned for more updates in the coming week!", 
+										 "Check out the live energy data under the time and weather", 
+										 "Submit your content to ten@mcgilleus.ca or see http://ten.mcgilleus.ca for more information"];
+			
+			/**
+			 * The collection of ticker labels.
+			 */
+			private var tickerLabels:ArrayCollection;
+			
+			/**
+			 * The index of the ticker label currently in view.
+			 */
+			private var currentIndex:int;
+			
+			/**
+			 * Handles the completion of the creation of the ticker tape.
+			 * Starts the ticker tape rolling.
+			 */
+			private function finish():void {
+				// remove all old tickers
+				tickerContainer.removeAllElements();
+				lastContainer.removeAllElements();
+				
+				// zero out old ticker information
+				tickerLabels = new ArrayCollection();
+				currentIndex = 0;
+				
+				// add a label for each ticker string
+				for(var i:int = 0; i < tickers.length; i++) {
+					// get the label for the ticker we are examining
+					var currentString:String = tickers[i];
+					var newLabel:Label = generateTickerLabel(currentString);
+					
+					// store the label
+					tickerLabels.addItem(newLabel);
+					
+					// add it to the appropriate container
+					if(i < tickers.length - 1) {
+						tickerContainer.addElement(newLabel);
+					} else {
+						lastContainer.addElement(newLabel);
+					}
+				}
+				
+				// mark the last container so it triggers a re-arranging
+				lastContainer.y = -100;
+				
+				// prepare the ticker timer
+				tickerTimer = new Timer(3500);//2000);
+				tickerTimer.addEventListener(TimerEvent.TIMER, handleTickerAdvance);
+				tickerTimer.start();
+			}
+			
+			/**
+			 * Generate a ticker tape label based on the given information.
+			 */
+			private function generateTickerLabel(label:String):Label {
+				var tickerLabel:Label = new Label();
+				tickerLabel.height = 40;
+				tickerLabel.setStyle("verticalAlign", "middle");
+				tickerLabel.styleName = "tickerElement";
+				tickerLabel.text = label;
+				
+				return tickerLabel;
+			}
+			
+			/**
+			 * Handles a tick on the ticker timer.
+			 * Advances to the next ticker item.
+			 */
+			private function handleTickerAdvance(event:TimerEvent):void {
+				// stop the timer so we can recalculate length for longer tickers
+				tickerTimer.stop();
+				
+				// play the transition to the next ticker
+				currentIndex = (currentIndex + 1) % tickerLabels.length;
+				mover.play();
+			}
+			
+			/**
+			 * Handles the move effect ending.
+			 * Checks to make sure that the ticker container has been repositioned 
+			 * once it advances above the visible area.
+			 */
+			private function checkPosition():void {
+				// check the bottom position
+				if(tickerContainer.y + tickerContainer.height <= 0) {
+					// it's out of view, so reposition it
+					tickerContainer.y = 40;
+				}
+				
+				// check the last ticker bottom position
+				if(lastContainer.y + lastContainer.height <= 0) {
+					// it's out of view, so reposition it
+					lastContainer.y = tickerContainer.y + tickerContainer.height;
+				}
+				
+				// see if we need to side scroll
+				if(false) {
+					// it's too wide for the display, so side scroll
+					// get the current label
+					var currentLabel:Label = tickerLabels.getItemAt(currentIndex) as Label;
+					//currentLabel.measureText();
+					
+					// setup the slider effect
+					slider.target = currentLabel;
+					slider.xBy = -100;
+					//slider.play();
+				} else {
+					// it fits fine, so just start the countdown for the next vertical scroll
+					tickerTimer.start();
+				}
+			}
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<s:Move id="mover" targets="{[tickerContainer, lastContainer]}" yBy="-40" duration="2000" effectEnd="checkPosition()" />
+		
+		<s:Move id="slider" duration="2000" effectEnd="tickerTimer.start()" />
+	</fx:Declarations>
+	
+	<mx:Image width="1360" height="40" source="assets/images/ticker_back.jpg" smoothBitmapContent="true" />
+	
+	<s:VGroup id="tickerContainer" paddingLeft="17" paddingRight="17" gap="0" />
+	<s:VGroup id="lastContainer" paddingLeft="17" paddingRight="17" />
+	
+</s:Group>
